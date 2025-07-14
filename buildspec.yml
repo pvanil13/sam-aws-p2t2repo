@@ -12,8 +12,7 @@ phases:
       - sam build
   post_build:
     commands:
-      - sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name sam-app --capabilities CAPABILITY_IAM --region us-east-1
+      - sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name sam-app --capabilities CAPABILITY_IAM --region us-east-1 --resolve-s3
 artifacts:
   files:
     - template.yaml
-
