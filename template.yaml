@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda to store files is s3 amd metadata in DynDB
+
+Globals:
+  Function:
+    Timeout: 60
+    Runtime: python3.12
+    MemorySize: 128
+    Architectures: [x86_64]
+
+Resources:
+  FileBucket:
+    Type: AWS::S3::Bucket
+    # Properties:
+    #   NotificationConfiguration:
+    #     LambdaConfigurations:
+    #       - Event: s3:ObjectCreated:Put
+    #         Function: !GetAtt WordCountFunction.Arn
+
+  MetadataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: FileMetadata
+      AttributeDefinitions:
+        - AttributeName: FileName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: FileName
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handler/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref FileBucket
+          TABLE_NAME: !Ref MetadataTable
+      Policies: 
+        - AWSLambdaBasicExecutionRole
+        - S3CrudPolicy:
+            BucketName: !Ref FileBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetadataTable
+      Events:
+        UploadAPI:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+
+  WordCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: wordcount.lambda_handler
+      CodeUri: wordcount/
+      Environment:
+        Variables:
+          BUCKET_NAME: "sam-aws-p2-filebucket-kh0ven6n99k8"
+          TABLE_NAME: !Ref MetadataTable
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: "sam-aws-p2-filebucket-kh0ven6n99k8"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetadataTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: "*"  
+      Events:
+        S3UploadTrigger:
+          Type: S3
+          Properties:
+            Bucket: !Ref FileBucket
+            Events: s3:ObjectCreated:Put                
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/upload"
+  S3Bucket:
+    Value: !Ref FileBucket
+  DynamoDBTable:
+    Value: !Ref MetadataTable
+
+        
