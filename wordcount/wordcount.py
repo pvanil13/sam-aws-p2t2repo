@@ -13,7 +13,7 @@ table = dynamodb.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
     try:
-        print("🚀 Lambda triggered")
+        print("🚀 Lambda function triggered")
         record = event['Records'][0]
         bucket = record['s3']['bucket']['name']
         key = record['s3']['object']['key']
